@@ -18,7 +18,13 @@ import {
 } from "./services/shared-supabase.js";
 import { buildCampaignDraft, isWeekend, mailTypes, segments, slugifySegment } from "./services/sales-campaigns.js";
 
-const PORT = Number(process.env.CLIENT_ACQUISITION_BRIDGE_PORT || 4100);
+function resolvePort() {
+  const rawPort = process.env.PORT || process.env.CLIENT_ACQUISITION_BRIDGE_PORT || "4100";
+  const port = Number(rawPort);
+  return Number.isInteger(port) && port >= 0 && port < 65536 ? port : 4100;
+}
+
+const PORT = resolvePort();
 
 const allowedJobs = new Map([
   ["import-leads", "run:import"],

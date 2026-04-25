@@ -28,3 +28,155 @@ Active code page: 1252
 {"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
 {"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
 {"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Running scheduled job","jobName":"generate-drafts","schedule":"0 * * * *"}
+{"level":"info","message":"Generated outreach drafts","count":0}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
