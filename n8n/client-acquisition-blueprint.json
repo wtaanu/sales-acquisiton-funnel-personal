@@ -1,0 +1,179 @@
+{
+  "name": "Client Acquisition Engine Blueprint",
+  "version": "1.0",
+  "description": "Blueprint for Apollo to Google Sheets to scoring to ZeroBounce to branded outreach draft generation.",
+  "sheet": {
+    "url": "https://docs.google.com/spreadsheets/d/11PnpIwokW7FlGlihjpswZIJwAj6VUT-xu3YebFy7158/edit?gid=0#gid=0",
+    "tabs": {
+      "raw_leads": "Raw Leads",
+      "scored_leads": "Scored Leads",
+      "approved_leads": "Approved Leads",
+      "outreach_drafts": "Outreach Drafts",
+      "settings": "Settings"
+    }
+  },
+  "workflows": [
+    {
+      "name": "Apollo Import to Raw Leads",
+      "trigger": {
+        "type": "manual_or_schedule",
+        "recommended": "manual first"
+      },
+      "steps": [
+        {
+          "id": "read_apollo_source",
+          "type": "source",
+          "details": "Read Apollo CSV export or API response"
+        },
+        {
+          "id": "normalize_fields",
+          "type": "transform",
+          "details": "Map input fields to Raw Leads schema"
+        },
+        {
+          "id": "write_raw_leads",
+          "type": "google_sheets_append_or_upsert",
+          "tab": "Raw Leads"
+        }
+      ]
+    },
+    {
+      "name": "Score Leads",
+      "trigger": {
+        "type": "schedule",
+        "cron_hint": "every 30-60 minutes"
+      },
+      "steps": [
+        {
+          "id": "read_unscored_rows",
+          "type": "google_sheets_read",
+          "tab": "Raw Leads",
+          "filter": {
+            "raw_status": [
+              "new",
+              "ready_for_scoring"
+            ]
+          }
+        },
+        {
+          "id": "score_with_local_logic",
+          "type": "code_or_webhook",
+          "details": "Call local Python scoring logic or a webhook wrapper around it"
+        },
+        {
+          "id": "write_scored_rows",
+          "type": "google_sheets_append_or_upsert",
+          "tab": "Scored Leads"
+        },
+        {
+          "id": "mark_raw_as_scored",
+          "type": "google_sheets_update",
+          "tab": "Raw Leads",
+          "field_updates": {
+            "raw_status": "scored"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ZeroBounce Verification",
+      "trigger": {
+        "type": "schedule",
+        "cron_hint": "every 30-60 minutes"
+      },
+      "steps": [
+        {
+          "id": "read_pending_verification",
+          "type": "google_sheets_read",
+          "tab": "Scored Leads",
+          "filter": {
+            "verification_status": [
+              "pending"
+            ]
+          }
+        },
+        {
+          "id": "apply_score_threshold",
+          "type": "if",
+          "condition": "lead_score >= minimum_score"
+        },
+        {
+          "id": "call_zerobounce",
+          "type": "http_request",
+          "details": "Call ZeroBounce email validation endpoint"
+        },
+        {
+          "id": "write_verification_result",
+          "type": "google_sheets_update",
+          "tab": "Scored Leads"
+        },
+        {
+          "id": "copy_reviewable_rows",
+          "type": "google_sheets_append_or_upsert",
+          "tab": "Approved Leads",
+          "condition": "verification_sub_status in ['valid', 'catch-all', 'unknown']",
+          "field_defaults": {
+            "approval_status": "pending_review",
+            "send_status": "not_sent"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Branded Outreach Draft Generation",
+      "trigger": {
+        "type": "schedule",
+        "cron_hint": "every 60 minutes"
+      },
+      "steps": [
+        {
+          "id": "read_approved_rows",
+          "type": "google_sheets_read",
+          "tab": "Approved Leads",
+          "filter": {
+            "approval_status": [
+              "approved"
+            ],
+            "send_status": [
+              "not_sent",
+              "draft_ready"
+            ]
+          }
+        },
+        {
+          "id": "generate_text_and_html_drafts",
+          "type": "code_or_llm",
+          "details": "Generate branded text and HTML draft fields for Anutech Labs"
+        },
+        {
+          "id": "write_outreach_drafts",
+          "type": "google_sheets_append_or_upsert",
+          "tab": "Outreach Drafts",
+          "field_defaults": {
+            "signature_company": "Anutech Labs",
+            "logo_mode": "local_preview",
+            "draft_status": "ready"
+          }
+        },
+        {
+          "id": "mark_approved_as_draft_ready",
+          "type": "google_sheets_update",
+          "tab": "Approved Leads",
+          "field_updates": {
+            "send_status": "draft_ready"
+          }
+        }
+      ]
+    }
+  ],
+  "required_credentials": [
+    "Google Sheets OAuth2",
+    "ZeroBounce API key",
+    "OpenAI API key"
+  ],
+  "implementation_notes": [
+    "Use plain text or light HTML for first-touch outreach.",
+    "Use hosted logo URL or CID embed for real outbound emails.",
+    "Keep manual approval in place before sending."
+  ]
+}

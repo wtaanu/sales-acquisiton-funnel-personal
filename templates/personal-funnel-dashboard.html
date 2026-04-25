@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anutech Labs | Personal Funnel OS</title>
+  <style>
+    :root {
+      --bg: #f3f1eb;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-strong: #ffffff;
+      --surface-dark: #16322c;
+      --ink: #10211d;
+      --muted: #5f6d68;
+      --line: rgba(16, 33, 29, 0.1);
+      --accent: #cb5f36;
+      --accent-soft: rgba(203, 95, 54, 0.12);
+      --signal: #0f766e;
+      --warning: #a16207;
+      --danger: #b42318;
+      --shadow: 0 24px 60px rgba(16, 33, 29, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(203, 95, 54, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(15, 118, 110, 0.2), transparent 26%),
+        linear-gradient(180deg, #f7f3ed 0%, #ece7de 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 272px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(18px);
+      border-right: 1px solid var(--line);
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .brand {
+      padding: 14px 16px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(145deg, rgba(16, 33, 29, 0.98), rgba(18, 52, 45, 0.92));
+      color: #fff7ef;
+      box-shadow: var(--shadow);
+    }
+
+    .brand small {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 1.15rem;
+      line-height: 1.35;
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 0 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      color: var(--ink);
+      text-decoration: none;
+      background: transparent;
+      border: 1px solid transparent;
+      font-weight: 600;
+    }
+
+    .nav-item.active,
+    .nav-item:hover {
+      background: var(--surface);
+      border-color: var(--line);
+    }
+
+    .nav-pill {
+      font-size: 0.72rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .main {
+      padding: 28px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 22px;
+    }
+
+    .panel {
+      background: var(--surface);
+      backdrop-filter: blur(22px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 30px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      right: -70px;
+      top: -60px;
+      background: radial-gradient(circle, rgba(203, 95, 54, 0.18), transparent 68%);
+    }
+
+    .eyebrow {
+      color: var(--signal);
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 10px;
+      font-size: clamp(2rem, 4vw, 3.35rem);
+      line-height: 1.02;
+      max-width: 10ch;
+    }
+
+    .hero-copy {
+      margin-top: 16px;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      margin-top: 22px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, #cb5f36, #b4482f);
+      color: white;
+      border-color: transparent;
+    }
+
+    .signal-card {
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(14, 58, 52, 0.98), rgba(22, 50, 44, 0.94));
+      color: #f7f3ed;
+      display: grid;
+      gap: 18px;
+    }
+
+    .signal-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .signal-row {
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .signal-row strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.96rem;
+    }
+
+    .signal-row span {
+      color: rgba(255, 247, 239, 0.72);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .metric {
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .metric strong {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 22px;
+    }
+
+    .section {
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    td {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.1);
+      color: var(--signal);
+      font-weight: 800;
+    }
+
+    .stage {
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(16, 33, 29, 0.08);
+    }
+
+    .alert-list,
+    .search-list,
+    .sync-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .item {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .item p,
+    .item span {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    .severity {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 800;
+    }
+
+    .severity.high {
+      color: var(--danger);
+    }
+
+    .severity.medium {
+      color: var(--warning);
+    }
+
+    .severity.low {
+      color: var(--signal);
+    }
+
+    .subgrid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .caption {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1120px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero,
+      .grid,
+      .subgrid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .main {
+        padding: 16px;
+      }
+
+      .sidebar {
+        padding: 16px;
+      }
+
+      .hero-card,
+      .signal-card,
+      .section {
+        padding: 18px;
+      }
+
+      th:nth-child(4),
+      td:nth-child(4) {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <small>Anutech Labs</small>
+        <strong>Personal Funnel OS</strong>
+        <span style="display:block;margin-top:10px;color:rgba(255,247,239,0.72);line-height:1.55;">Track buying windows, automate outreach, and keep account intelligence in one place.</span>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Workspace</div>
+        <a class="nav-item active" href="#"><span>Overview</span><span class="nav-pill">Live</span></a>
+        <a class="nav-item" href="#"><span>Company Intelligence</span><span class="nav-pill">106</span></a>
+        <a class="nav-item" href="#"><span>Saved Searches</span><span class="nav-pill">8</span></a>
+        <a class="nav-item" href="#"><span>Watchlists</span><span class="nav-pill">34</span></a>
+        <a class="nav-item" href="#"><span>Alerts</span><span class="nav-pill">9</span></a>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Execution</div>
+        <a class="nav-item" href="#"><span>Outreach Queue</span><span class="nav-pill">Ready</span></a>
+        <a class="nav-item" href="#"><span>Replies</span><span class="nav-pill">Review</span></a>
+        <a class="nav-item" href="#"><span>CRM Sync</span><span class="nav-pill">Sync</span></a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="panel hero-card">
+          <div class="eyebrow">Sales Intelligence Platform</div>
+          <h1>Spot buying signals early and move faster with less manual work.</h1>
+          <p class="hero-copy">
+            Your tool should feel like Crunchbase for account intelligence and Instantly for operational clarity. The platform surfaces primed companies, suggests what to say, tracks where workflow pain is building, and keeps your personal funnel organized from first signal to closed client.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#">Review Priority Accounts</a>
+            <a class="button" href="#">Open Saved Searches</a>
+          </div>
+        </div>
+
+        <div class="panel signal-card">
+          <div>
+            <div class="caption" style="color:rgba(255,247,239,0.72);">AI Predictions</div>
+            <h3 style="margin-top:8px;font-size:1.4rem;">This week’s likely buying windows</h3>
+          </div>
+          <div class="signal-stack">
+            <div class="signal-row">
+              <strong>Legal.io</strong>
+              <span>Manual intake pressure plus strong legal-ops signals. Best entry: a faster intake engine with measurable turnaround gains.</span>
+            </div>
+            <div class="signal-row">
+              <strong>Lead Out Software</strong>
+              <span>Lead response leakage is the clearest commercial gap. Best move: response-speed automation with measurable conversion lift.</span>
+            </div>
+            <div class="signal-row">
+              <strong>Aqore Staffing Software</strong>
+              <span>Execution drag is building around staffing workflow handoffs. Best move: workflow capacity reclaim pitch tied to throughput.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <div class="metric">
+          <span>Tracked Companies</span>
+          <strong>106</strong>
+        </div>
+        <div class="metric">
+          <span>Open Alerts</span>
+          <strong>9</strong>
+        </div>
+        <div class="metric">
+          <span>Reviewed Drafts</span>
+          <strong>20</strong>
+        </div>
+        <div class="metric">
+          <span>Replies Waiting</span>
+          <strong>4</strong>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <div class="caption">Company Intelligence</div>
+              <h2 style="margin-top:8px;">Accounts with the clearest workflow pain</h2>
+              <p>Use this table like your founder CRM plus analyst workspace. It shows who is most likely to buy and why.</p>
+            </div>
+            <a class="button" href="#">See all companies</a>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Signal</th>
+                <th>Score</th>
+                <th>Recommended Offer</th>
+                <th>Stage</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Lead Out Software</strong><br><span style="color:var(--muted);">B2B SaaS · US</span></td>
+                <td>Lead routing friction and response lag</td>
+                <td><span class="score">82</span></td>
+                <td>Lead Response Engine</td>
+                <td><span class="stage">Priority</span></td>
+              </tr>
+              <tr>
+                <td><strong>Legal.io</strong><br><span style="color:var(--muted);">Legal Tech · US</span></td>
+                <td>Intake pressure and approval slowdown</td>
+                <td><span class="score">77</span></td>
+                <td>Client Intake Engine</td>
+                <td><span class="stage">Reviewed</span></td>
+              </tr>
+              <tr>
+                <td><strong>Aqore Staffing Software</strong><br><span style="color:var(--muted);">Staffing Software · US</span></td>
+                <td>Execution drag across staffing workflows</td>
+                <td><span class="score">74</span></td>
+                <td>Ops Bridge Engine</td>
+                <td><span class="stage">Outreach Active</span></td>
+              </tr>
+              <tr>
+                <td><strong>Gradient Works</strong><br><span style="color:var(--muted);">Revenue Software · US</span></td>
+                <td>Retention and pipeline risk signals</td>
+                <td><span class="score">71</span></td>
+                <td>Churn Alert Engine</td>
+                <td><span class="stage">Watchlist</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <div class="caption">Alerts</div>
+              <h2 style="margin-top:8px;">What needs action right now</h2>
+            </div>
+            <a class="button" href="#">Open alerts</a>
+          </div>
+
+          <div class="alert-list">
+            <div class="item">
+              <div class="item-top">
+                <strong>Lead Out Software is entering a likely buying window</strong>
+                <span class="severity high">High</span>
+              </div>
+              <p>Highest lead score is 82. Commercial pain is strong enough for a direct, specific pitch tied to response-speed gains.</p>
+            </div>
+
+            <div class="item">
+              <div class="item-top">
+                <strong>Legal.io has live engagement signals</strong>
+                <span class="severity high">High</span>
+              </div>
+              <p>Prioritize consultative response and move quickly before sending additional fresh outbound.</p>
+            </div>
+
+            <div class="item">
+              <div class="item-top">
+                <strong>Gradient Works needs stronger enrichment</strong>
+                <span class="severity medium">Medium</span>
+              </div>
+              <p>The account is promising, but more context will sharpen the message and improve conversion odds.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="subgrid">
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <div class="caption">Saved Searches</div>
+              <h2 style="margin-top:8px;">Repeatable sourcing logic</h2>
+            </div>
+          </div>
+          <div class="search-list">
+            <div class="item">
+              <div class="item-top">
+                <strong>US SaaS Ops Buyers</strong>
+                <span class="stage">Active</span>
+              </div>
+              <span>15–200 employees, revops, implementation, customer success, workflow friction.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Legal Intake Targets</strong>
+                <span class="stage">Active</span>
+              </div>
+              <span>Legal-tech and legal ops accounts showing intake, document, or approval drag.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Staffing Workflow Accounts</strong>
+                <span class="stage">Review</span>
+              </div>
+              <span>Staffing firms and platforms with execution drag, handoff friction, or throughput bottlenecks.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <div class="caption">Watchlists</div>
+              <h2 style="margin-top:8px;">Priority lists</h2>
+            </div>
+          </div>
+          <div class="search-list">
+            <div class="item">
+              <div class="item-top">
+                <strong>Priority Accounts</strong>
+                <span class="stage">12</span>
+              </div>
+              <span>High-fit accounts already enriched enough for tailored outreach or Loom-first contact.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Buying Window Watch</strong>
+                <span class="stage">18</span>
+              </div>
+              <span>Accounts showing the earliest signs of process stress, growth, or workflow complexity.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Needs Enrichment</strong>
+                <span class="stage">9</span>
+              </div>
+              <span>Good-fit names that need stronger funding, hiring, or tech-stack context before sending.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel section">
+          <div class="section-head">
+            <div>
+              <div class="caption">CRM Sync</div>
+              <h2 style="margin-top:8px;">Personal CRM readiness</h2>
+            </div>
+          </div>
+          <div class="sync-list">
+            <div class="item">
+              <div class="item-top">
+                <strong>Lead Out Software</strong>
+                <span class="stage">Ready</span>
+              </div>
+              <span>Push as `company + primary contact` into personal CRM with the lead-response offer attached.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Legal.io</strong>
+                <span class="stage">Sync</span>
+              </div>
+              <span>Create account timeline entry with intake pain, reply context, and next-step draft.</span>
+            </div>
+            <div class="item">
+              <div class="item-top">
+                <strong>Gradient Works</strong>
+                <span class="stage">Hold</span>
+              </div>
+              <span>Wait until enrichment improves the pain framing before syncing into the active pipeline.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,5 @@
+company_name,country,industry,employee_count,funding_stage,recent_signal,hiring_signal,tech_stack,pain_notes,buyer_name,buyer_title,email,website
+Northbeam Labs,United States,B2B SaaS,28,Series A,Raised growth round and expanding GTM,Hiring Sales Ops Manager,HubSpot; Slack; inbound demo requests,Manual lead routing and delayed follow-up,Alice Brown,CEO,alice@northbeam.example,https://northbeam.example
+Harbor Legal,United Kingdom,Law Firm,22,Private,New consultation push,Hiring intake coordinator,Website forms; WhatsApp; spreadsheets,Manual client intake and document collection,James Clarke,Managing Partner,james@harborlegal.example,https://harborlegal.example
+Bricklane Growth,United Kingdom,Real Estate,35,Private,Expanding agent team,Hiring operations lead,CRM; email; spreadsheets,Leads arrive from multiple channels with weak follow-up,Nina Holmes,COO,nina@bricklane.example,https://bricklane.example
+Signal Forge,United States,B2B SaaS,48,Series A,Founder building audience,Hiring content marketer,LinkedIn; Loom; HubSpot,Inconsistent founder-led content engine,Sam Reed,Founder,sam@signalforge.example,https://signalforge.example

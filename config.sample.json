@@ -1,0 +1,31 @@
+{
+  "minimum_score": 90,
+  "target_countries": [
+    "United States",
+    "United Kingdom"
+  ],
+  "allowed_verification_statuses": [
+    "valid",
+    "catch-all"
+  ],
+  "google_sheets": {
+    "workbook_name": "Client Acquisition Engine",
+    "tabs": {
+      "raw_leads": "Raw Leads",
+      "scored_leads": "Scored Leads",
+      "approved_leads": "Approved Leads",
+      "outreach_drafts": "Outreach Drafts"
+    }
+  },
+  "services": {
+    "apollo": {
+      "enabled": true
+    },
+    "zerobounce": {
+      "enabled": true
+    },
+    "openai": {
+      "enabled": true
+    }
+  }
+}
