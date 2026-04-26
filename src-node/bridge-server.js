@@ -143,6 +143,66 @@ function buildDraftPayload(input) {
   };
 }
 
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char] || char));
+}
+
+function applyRecipientVariables(value, recipient = {}) {
+  const firstName = recipient.firstName || recipient.name?.split(" ")[0] || "there";
+  return String(value || "")
+    .replaceAll("{{first_name}}", firstName)
+    .replaceAll("{{name}}", recipient.name || firstName)
+    .replaceAll("{{company}}", recipient.company || "your business")
+    .replaceAll("{{country}}", recipient.country || "");
+}
+
+function brandEmailHtml({ html, text, recipient }) {
+  const bodyHtml = html
+    ? applyRecipientVariables(html, recipient)
+    : applyRecipientVariables(text, recipient)
+        .split("\n")
+        .map((line) => (line ? `<p>${escapeHtml(line)}</p>` : "<br />"))
+        .join("");
+  const logoBlock = config.logoUrl
+    ? `<img src="${escapeHtml(config.logoUrl)}" alt="Anutech Labs" style="height:48px;max-width:180px;object-fit:contain" />`
+    : `<div style="font-size:22px;font-weight:800;color:#f97316;letter-spacing:.3px">Anutech Labs</div>`;
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;color:#111827">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;padding:24px 12px">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+            <tr>
+              <td style="background:#0f172a;padding:22px 26px;border-bottom:4px solid #f97316">
+                ${logoBlock}
+                <div style="margin-top:8px;color:#cbd5e1;font-size:13px">AI SDR by Anutech Labs</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 26px;font-size:15px;line-height:1.7;color:#1f2937">
+                ${bodyHtml}
+                <p style="margin-top:28px">Thanks &amp; Regards,<br /><strong>AI SDR- Anutech Labs</strong></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function brandEmailText(text, recipient) {
+  const replaced = applyRecipientVariables(text, recipient);
+  const cleaned = replaced.replace(/Thanks\s*&\s*Regards[\s\S]*$/i, "").trim();
+  return `${cleaned}
+
+Thanks & Regards
+AI SDR- Anutech Labs`;
+}
+
 function smtpHealthSummary() {
   return {
     configured: canSendEmail(),
@@ -584,13 +644,16 @@ async function handleRequest(request, response) {
       });
     }
 
+    const recipient = body.to || {};
+    const brandedText = brandEmailText(body.text, recipient);
+    const brandedHtml = brandEmailHtml({ html: body.html, text: body.text, recipient });
     let result;
     try {
       result = await sendTransactionalMail({
         to: body.to?.email || body.email,
         subject: body.subject,
-        text: body.text,
-        html: body.html,
+        text: brandedText,
+        html: brandedHtml,
         attachments: Array.isArray(body.attachments)
           ? body.attachments.map((attachment) => ({
               filename: attachment.filename,
