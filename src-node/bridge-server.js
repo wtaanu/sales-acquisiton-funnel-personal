@@ -196,6 +196,28 @@ async function handleRequest(request, response) {
     return json(response, 204, {});
   }
 
+  if (request.method === "GET" && request.url === "/api/version") {
+    return json(response, 200, {
+      ok: true,
+      service: "anutechlabs-client-acquisition-bridge",
+      version: "2026-04-26-resend-send-email",
+      routes: [
+        "GET /api/health",
+        "GET /api/email-diagnostics",
+        "GET /api/smtp-diagnostics",
+        "GET /api/sales-dashboard",
+        "POST /api/send-email",
+        "POST /api/jobs/run",
+        "POST /api/segments",
+        "POST /api/prospects/migrate-sheets",
+        "POST /api/prospects/generate",
+        "POST /api/campaigns/generate-drafts",
+        "POST /api/drafts/review",
+        "POST /api/drafts/send"
+      ]
+    });
+  }
+
   if (request.method === "GET" && request.url === "/api/health") {
     const [drafts] = await Promise.all([readSheet(config.sheetTabs.outreachDrafts).catch(() => [])]);
     return json(response, 200, {
