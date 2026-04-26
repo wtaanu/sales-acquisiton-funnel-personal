@@ -13,6 +13,12 @@ export const config = {
   defaultSignatureCompany: process.env.DEFAULT_SIGNATURE_COMPANY || "Anutech Labs",
   logoMode: process.env.LOGO_MODE || "local_preview",
   logoUrl: process.env.LOGO_URL || "",
+  resend: {
+    apiKey: process.env.RESEND_API_KEY || "",
+    fromEmail: process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || "",
+    fromName: process.env.RESEND_FROM_NAME || process.env.SMTP_FROM_NAME || "Anutech Labs",
+    replyTo: process.env.RESEND_REPLY_TO || process.env.SMTP_REPLY_TO || process.env.SMTP_FROM_EMAIL || ""
+  },
   apolloImportFile: process.env.APOLLO_IMPORT_FILE || "./data/sample_leads.csv",
   apollo: {
     importMode: process.env.APOLLO_IMPORT_MODE || "csv",

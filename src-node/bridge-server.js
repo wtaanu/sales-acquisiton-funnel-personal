@@ -6,6 +6,7 @@ import { outreachDraftColumns } from "./constants/sheetColumns.js";
 import { appendRows, readSheet } from "./lib/google-sheets.js";
 import { nowIso } from "./lib/time.js";
 import { canSendEmail, createTransport, sendMail } from "./services/smtp.js";
+import { canSendWithResend, sendResendMail } from "./services/resend.js";
 import {
   createSalesEmailDraft,
   getSalesDashboardData,
@@ -156,6 +157,23 @@ function smtpHealthSummary() {
   };
 }
 
+function emailProviderSummary() {
+  return {
+    activeProvider: canSendWithResend() ? "resend" : canSendEmail() ? "smtp" : "none",
+    resendReady: canSendWithResend(),
+    resendFromEmailConfigured: Boolean(config.resend.fromEmail),
+    smtpReady: canSendEmail(),
+    smtp: smtpHealthSummary()
+  };
+}
+
+async function sendTransactionalMail(message) {
+  if (canSendWithResend()) {
+    return sendResendMail(message);
+  }
+  return sendMail(message);
+}
+
 async function mirrorSheetProspectsToSupabase() {
   const [rawRows, scoredRows, approvedRows] = await Promise.all([
     readSheet(config.sheetTabs.rawLeads).catch(() => []),
@@ -184,10 +202,19 @@ async function handleRequest(request, response) {
       ok: true,
       service: "anutechlabs-client-acquisition-bridge",
       smtpReady: canSendEmail(),
+      emailProvider: emailProviderSummary(),
       smtp: smtpHealthSummary(),
       sharedSupabaseReady: isSharedSupabaseConfigured(),
       outreachDraftCount: drafts.length,
       sheetTabs: config.sheetTabs,
+      checkedAt: nowIso()
+    });
+  }
+
+  if (request.method === "GET" && request.url === "/api/email-diagnostics") {
+    return json(response, 200, {
+      ok: canSendWithResend() || canSendEmail(),
+      ...emailProviderSummary(),
       checkedAt: nowIso()
     });
   }
@@ -397,7 +424,7 @@ async function handleRequest(request, response) {
     if (isWeekend() && !body.overrideWeekend) {
       return json(response, 409, { error: "Weekend sending is blocked. Warm outreach sends only Monday-Friday." });
     }
-    if (!canSendEmail()) return json(response, 500, { error: "SMTP is not configured." });
+    if (!canSendWithResend() && !canSendEmail()) return json(response, 500, { error: "No email provider is configured." });
 
     const { data: draft, error } = await supabase
       .from("sales_email_drafts")
@@ -411,7 +438,7 @@ async function handleRequest(request, response) {
       return json(response, 400, { error: "Prospect is not eligible for sending." });
     }
 
-    const result = await sendMail({
+    const result = await sendTransactionalMail({
       to: prospect.email,
       subject: draft.subject_line,
       text: draft.email_body_text,
@@ -445,10 +472,10 @@ async function handleRequest(request, response) {
       subjectLine: draft.subject_line,
       eventType: "sent",
       providerMessageId: result.messageId,
-      detail: "Sent through Sales Tool campaign dashboard."
+      detail: `Sent through Sales Tool campaign dashboard via ${result.provider || "smtp"}.`
     });
 
-    return json(response, 200, { ok: true, messageId: result.messageId });
+    return json(response, 200, { ok: true, provider: result.provider || "smtp", messageId: result.messageId });
   }
 
   if (request.method === "POST" && request.url === "/api/jobs/run") {
@@ -501,7 +528,7 @@ async function handleRequest(request, response) {
   if (request.method === "POST" && request.url === "/api/send-email") {
     const body = await readBody(request);
 
-    if (!canSendEmail()) {
+    if (!canSendWithResend() && !canSendEmail()) {
       const normalizedBody = {
         ...body,
         sourceRecordId: body.sourceRecordId || randomUUID()
@@ -525,19 +552,19 @@ async function handleRequest(request, response) {
         email: draftPayload.email,
         subjectLine: draftPayload.subjectLine,
         eventType: "queued",
-        detail: "SMTP not configured; queued as source-aware draft."
+        detail: "No email provider configured; queued as source-aware draft."
       });
       return json(response, 202, {
         ok: true,
         sent: false,
         queued: true,
-        detail: "SMTP is not configured; email queued as draft."
+        detail: "No email provider is configured; email queued as draft."
       });
     }
 
     let result;
     try {
-      result = await sendMail({
+      result = await sendTransactionalMail({
         to: body.to?.email || body.email,
         subject: body.subject,
         text: body.text,
@@ -569,7 +596,7 @@ async function handleRequest(request, response) {
         sent: false,
         queued: false,
         error: detail,
-        smtp: smtpHealthSummary()
+        emailProvider: emailProviderSummary()
       });
     }
     await logSharedSendEvent({
@@ -579,13 +606,14 @@ async function handleRequest(request, response) {
       subjectLine: body.subject,
       eventType: "sent",
       providerMessageId: result.messageId,
-      detail: "Sent through My Sales Tool SMTP."
+      detail: `Sent through My Sales Tool ${result.provider || "smtp"}.`
     });
 
     return json(response, 200, {
       ok: true,
       sent: true,
       queued: false,
+      provider: result.provider || "smtp",
       messageId: result.messageId
     });
   }
