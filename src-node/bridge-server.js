@@ -183,7 +183,7 @@ function brandEmailHtml({ html, text, recipient }) {
             <tr>
               <td style="padding:28px 26px;font-size:15px;line-height:1.7;color:#1f2937">
                 ${bodyHtml}
-                <p style="margin-top:28px">Thanks &amp; Regards,<br /><strong>AI SDR- Anutech Labs</strong></p>
+                <p style="margin-top:28px">Thanks &amp; Regards,<br /><strong>AI SDR- Anutech Labs</strong><br />Website: <a href="https://anutechlabs.company/" style="color:#f97316;font-weight:700;text-decoration:none">https://anutechlabs.company/</a></p>
               </td>
             </tr>
           </table>
@@ -200,7 +200,8 @@ function brandEmailText(text, recipient) {
   return `${cleaned}
 
 Thanks & Regards
-AI SDR- Anutech Labs`;
+AI SDR- Anutech Labs
+Website: https://anutechlabs.company/`;
 }
 
 function smtpHealthSummary() {
