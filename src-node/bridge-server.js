@@ -5,7 +5,7 @@ import { config } from "./config.js";
 import { outreachDraftColumns } from "./constants/sheetColumns.js";
 import { appendRows, readSheet } from "./lib/google-sheets.js";
 import { nowIso } from "./lib/time.js";
-import { canSendEmail, sendMail } from "./services/smtp.js";
+import { canSendEmail, createTransport, sendMail } from "./services/smtp.js";
 import {
   createSalesEmailDraft,
   getSalesDashboardData,
@@ -142,6 +142,20 @@ function buildDraftPayload(input) {
   };
 }
 
+function smtpHealthSummary() {
+  return {
+    configured: canSendEmail(),
+    hostConfigured: Boolean(config.smtp.host),
+    host: config.smtp.host || "",
+    port: config.smtp.port,
+    secure: config.smtp.secure,
+    userConfigured: Boolean(config.smtp.user),
+    fromEmailConfigured: Boolean(config.smtp.fromEmail),
+    replyToConfigured: Boolean(config.smtp.replyTo),
+    tlsRejectUnauthorized: config.smtp.tlsRejectUnauthorized
+  };
+}
+
 async function mirrorSheetProspectsToSupabase() {
   const [rawRows, scoredRows, approvedRows] = await Promise.all([
     readSheet(config.sheetTabs.rawLeads).catch(() => []),
@@ -170,11 +184,41 @@ async function handleRequest(request, response) {
       ok: true,
       service: "anutechlabs-client-acquisition-bridge",
       smtpReady: canSendEmail(),
+      smtp: smtpHealthSummary(),
       sharedSupabaseReady: isSharedSupabaseConfigured(),
       outreachDraftCount: drafts.length,
       sheetTabs: config.sheetTabs,
       checkedAt: nowIso()
     });
+  }
+
+  if (request.method === "GET" && request.url === "/api/smtp-diagnostics") {
+    if (!canSendEmail()) {
+      return json(response, 500, {
+        ok: false,
+        smtp: smtpHealthSummary(),
+        error: "SMTP environment variables are incomplete."
+      });
+    }
+
+    try {
+      const transporter = createTransport();
+      await transporter.verify();
+      return json(response, 200, {
+        ok: true,
+        smtp: smtpHealthSummary(),
+        detail: "SMTP authentication and connection verified."
+      });
+    } catch (error) {
+      return json(response, 500, {
+        ok: false,
+        smtp: smtpHealthSummary(),
+        error: error instanceof Error ? error.message : "SMTP verification failed.",
+        code: error && typeof error === "object" && "code" in error ? error.code : undefined,
+        command: error && typeof error === "object" && "command" in error ? error.command : undefined,
+        response: error && typeof error === "object" && "response" in error ? error.response : undefined
+      });
+    }
   }
 
   if (request.method === "GET" && request.url === "/api/sales-dashboard") {
@@ -491,23 +535,43 @@ async function handleRequest(request, response) {
       });
     }
 
-    const result = await sendMail({
-      to: body.to?.email || body.email,
-      subject: body.subject,
-      text: body.text,
-      html: body.html,
-      attachments: Array.isArray(body.attachments)
-        ? body.attachments.map((attachment) => ({
-            filename: attachment.filename,
-            content: Buffer.from(attachment.contentBase64 || "", "base64"),
-            contentType: attachment.contentType
-          }))
-        : undefined,
-      headers: {
-        "X-Anutech-Draft-Source": body.source || "ai_sdr",
-        "X-Anutech-Source-Record-Id": body.sourceRecordId || ""
-      }
-    });
+    let result;
+    try {
+      result = await sendMail({
+        to: body.to?.email || body.email,
+        subject: body.subject,
+        text: body.text,
+        html: body.html,
+        attachments: Array.isArray(body.attachments)
+          ? body.attachments.map((attachment) => ({
+              filename: attachment.filename,
+              content: Buffer.from(attachment.contentBase64 || "", "base64"),
+              contentType: attachment.contentType
+            }))
+          : undefined,
+        headers: {
+          "X-Anutech-Draft-Source": body.source || "ai_sdr",
+          "X-Anutech-Source-Record-Id": body.sourceRecordId || ""
+        }
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "SMTP send failed.";
+      await logSharedSendEvent({
+        draftSource: body.source || "ai_sdr",
+        sourceRecordId: body.sourceRecordId || "",
+        email: body.to?.email || body.email,
+        subjectLine: body.subject,
+        eventType: "failed",
+        detail
+      });
+      return json(response, 500, {
+        ok: false,
+        sent: false,
+        queued: false,
+        error: detail,
+        smtp: smtpHealthSummary()
+      });
+    }
     await logSharedSendEvent({
       draftSource: body.source || "ai_sdr",
       sourceRecordId: body.sourceRecordId || "",
