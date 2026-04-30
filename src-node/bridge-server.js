@@ -2,8 +2,9 @@ import http from "http";
 import { spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { config } from "./config.js";
-import { outreachDraftColumns } from "./constants/sheetColumns.js";
+import { outreachDraftColumns, rawLeadColumns } from "./constants/sheetColumns.js";
 import { appendRows, readSheet } from "./lib/google-sheets.js";
+import { buildLeadId } from "./lib/lead-id.js";
 import { nowIso } from "./lib/time.js";
 import { canSendEmail, createTransport, sendMail } from "./services/smtp.js";
 import { canSendWithResend, sendResendMail } from "./services/resend.js";
@@ -18,6 +19,7 @@ import {
   upsertSharedDraft
 } from "./services/shared-supabase.js";
 import { buildCampaignDraft, isWeekend, mailTypes, segments, slugifySegment } from "./services/sales-campaigns.js";
+import { fetchApolloPeople } from "./services/apollo.js";
 
 function resolvePort() {
   const rawPort = process.env.PORT || process.env.CLIENT_ACQUISITION_BRIDGE_PORT || "4100";
@@ -235,6 +237,72 @@ async function sendTransactionalMail(message) {
   return sendMail(message);
 }
 
+function normalizeSheetRow(row) {
+  const normalized = {};
+  for (const [key, value] of Object.entries(row || {})) {
+    const normalizedKey = String(key)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    normalized[normalizedKey] = value;
+  }
+
+  const email = String(normalized.email || normalized.email_address || normalized.work_email || "").trim().toLowerCase();
+  const leadId = String(normalized.lead_id || normalized.id || "").trim();
+
+  return {
+    ...normalized,
+    email,
+    lead_id: leadId || (email ? `sheet_${email.replace(/[^a-z0-9]+/g, "_")}` : "")
+  };
+}
+
+function commaList(value, fallback = []) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  const items = String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item, index, array) => array.indexOf(item) === index);
+  return items.length ? items : fallback;
+}
+
+function apolloFiltersFromBody(body = {}) {
+  return {
+    page: Number(body.page || config.apollo.page),
+    perPage: Number(body.perPage || config.apollo.perPage),
+    targetTitles: commaList(body.targetTitles, config.apollo.targetTitles),
+    targetLocations: commaList(body.targetLocations, config.apollo.targetLocations),
+    emailStatus: commaList(body.emailStatus, config.apollo.emailStatus),
+    includeKeywords: commaList(body.includeKeywords || body.keywords, config.apollo.includeKeywords)
+  };
+}
+
+function mapApolloRowToRawLead(row, timestamp) {
+  const email = String(row.email || "").trim().toLowerCase();
+  return {
+    lead_id: buildLeadId({ company_name: row.company_name, email }),
+    company_name: row.company_name || "",
+    country: row.country || "",
+    industry: row.industry || "",
+    employee_count: row.employee_count || "",
+    funding_stage: row.funding_stage || "",
+    recent_signal: row.recent_signal || "Apollo API prospect",
+    hiring_signal: row.hiring_signal || row.buyer_title || "",
+    tech_stack: row.tech_stack || "",
+    pain_notes: row.pain_notes || "",
+    buyer_name: row.buyer_name || "",
+    buyer_title: row.buyer_title || "",
+    email,
+    website: row.website || "",
+    linkedin_url: row.linkedin_url || "",
+    source: "apollo_api",
+    raw_status: "ready_for_scoring",
+    imported_at: timestamp
+  };
+}
+
 async function mirrorSheetProspectsToSupabase() {
   const [rawRows, scoredRows, approvedRows] = await Promise.all([
     readSheet(config.sheetTabs.rawLeads).catch(() => []),
@@ -243,13 +311,35 @@ async function mirrorSheetProspectsToSupabase() {
   ]);
   const byLeadId = new Map();
 
-  for (const row of rawRows) byLeadId.set(row.lead_id, { ...row, prospect_status: "new" });
-  for (const row of scoredRows) byLeadId.set(row.lead_id, { ...(byLeadId.get(row.lead_id) || {}), ...row, prospect_status: "scored" });
-  for (const row of approvedRows) byLeadId.set(row.lead_id, { ...(byLeadId.get(row.lead_id) || {}), ...row, prospect_status: "verified" });
+  for (const rawRow of rawRows) {
+    const row = normalizeSheetRow(rawRow);
+    if (row.lead_id && row.email) byLeadId.set(row.lead_id, { ...row, prospect_status: "new" });
+  }
+  for (const rawRow of scoredRows) {
+    const row = normalizeSheetRow(rawRow);
+    if (row.lead_id && row.email) byLeadId.set(row.lead_id, { ...(byLeadId.get(row.lead_id) || {}), ...row, prospect_status: "scored" });
+  }
+  for (const rawRow of approvedRows) {
+    const row = normalizeSheetRow(rawRow);
+    if (row.lead_id && row.email) byLeadId.set(row.lead_id, { ...(byLeadId.get(row.lead_id) || {}), ...row, prospect_status: "verified" });
+  }
 
   const rows = Array.from(byLeadId.values()).filter((row) => row.lead_id && row.email);
   const results = await Promise.all(rows.map((row) => upsertSalesProspect(row)));
-  return results.filter(Boolean).length;
+  return {
+    migrated: results.filter(Boolean).length,
+    eligible: rows.length,
+    sourceRows: {
+      raw: rawRows.length,
+      scored: scoredRows.length,
+      approved: approvedRows.length
+    },
+    sheetTabs: {
+      raw: config.sheetTabs.rawLeads,
+      scored: config.sheetTabs.scoredLeads,
+      approved: config.sheetTabs.approvedLeads
+    }
+  };
 }
 
 async function handleRequest(request, response) {
@@ -384,37 +474,91 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST" && request.url === "/api/prospects/migrate-sheets") {
-    const count = await mirrorSheetProspectsToSupabase();
-    return json(response, 200, { ok: true, count });
+    const migration = await mirrorSheetProspectsToSupabase();
+    return json(response, 200, { ok: true, count: migration.migrated, ...migration });
   }
 
   if (request.method === "POST" && request.url === "/api/prospects/generate") {
     const body = await readBody(request);
-    const jobs = body.mode === "existing"
-      ? []
-      : ["import-leads", "score-leads", "verify-emails"];
+    const filters = apolloFiltersFromBody(body.apolloFilters || body);
     const runResults = [];
 
-    for (const job of jobs) {
-      const script = allowedJobs.get(job);
-      const startedAt = nowIso();
-      const result = await runNpmScript(script);
-      await logSharedJobRun({
-        jobName: job,
-        scriptName: script,
-        status: result.code === 0 ? "completed" : "failed",
-        exitCode: result.code,
-        stdout: result.stdout,
-        stderr: result.stderr,
-        startedAt,
-        finishedAt: nowIso()
-      });
-      runResults.push({ job, ...result });
-      if (result.code !== 0) break;
+    if (body.mode !== "existing") {
+      const timestamp = nowIso();
+      const existingRawRows = await readSheet(config.sheetTabs.rawLeads).catch(() => []);
+      const existingLeadIds = new Set(existingRawRows.map((row) => row.lead_id).filter(Boolean));
+      const people = await fetchApolloPeople(filters);
+      const rawRows = people
+        .map((row) => mapApolloRowToRawLead(row, timestamp))
+        .filter((row) => row.email && !existingLeadIds.has(row.lead_id));
+
+      if (rawRows.length) {
+        await appendRows(config.sheetTabs.rawLeads, rawRows.map((row) => rawLeadColumns.map((column) => row[column] || "")));
+      }
+      runResults.push({ job: "apollo-direct-import", code: 0, imported: rawRows.length, filters });
+
+      for (const job of ["score-leads", "verify-emails"]) {
+        const script = allowedJobs.get(job);
+        const startedAt = nowIso();
+        const result = await runNpmScript(script);
+        await logSharedJobRun({
+          jobName: job,
+          scriptName: script,
+          status: result.code === 0 ? "completed" : "failed",
+          exitCode: result.code,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          startedAt,
+          finishedAt: nowIso()
+        });
+        runResults.push({ job, ...result });
+        if (result.code !== 0) break;
+      }
     }
 
-    const migrated = await mirrorSheetProspectsToSupabase();
-    return json(response, 200, { ok: true, mode: body.mode || "new", jobs: runResults, migrated });
+    const migration = await mirrorSheetProspectsToSupabase();
+    return json(response, 200, { ok: true, mode: body.mode || "new", apolloFilters: filters, jobs: runResults, migrated: migration.migrated, migration });
+  }
+
+  if (request.method === "POST" && request.url === "/api/prospects/manual") {
+    const body = await readBody(request);
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!email) return json(response, 400, { error: "Email is required." });
+    const prospect = await upsertSalesProspect({
+      lead_id: body.leadId || buildLeadId({ company_name: body.companyName, email }),
+      segment: body.segment || "general_b2b",
+      company_name: body.companyName || "",
+      buyer_name: body.buyerName || "",
+      buyer_title: body.buyerTitle || "",
+      email,
+      country: body.country || "",
+      industry: body.industry || "",
+      website: body.website || "",
+      source: "manual_admin",
+      pain_notes: body.notes || "",
+      lead_score: Number(body.leadScore || 0),
+      prospect_status: body.prospectStatus || (Number(body.leadScore || 0) > 0 ? "scored" : "new")
+    });
+    return json(response, prospect ? 200 : 500, prospect ? { ok: true, prospect } : { error: "Unable to create prospect." });
+  }
+
+  if (request.method === "POST" && request.url === "/api/prospects/purge-failed") {
+    const supabase = getSharedSupabaseClient();
+    if (!supabase) return json(response, 500, { error: "Shared Supabase is not configured." });
+    const { data: failedEvents, error: failedError } = await supabase
+      .from("client_acquisition_email_events")
+      .select("email")
+      .eq("event_type", "failed");
+    if (failedError) return json(response, 500, { error: failedError.message });
+    const emails = [...new Set((failedEvents || []).map((row) => row.email).filter(Boolean))];
+    if (!emails.length) return json(response, 200, { ok: true, removed: 0 });
+
+    await supabase.from("sales_email_drafts").delete().in("lead_id", (
+      await supabase.from("sales_prospects").select("lead_id").in("email", emails)
+    ).data?.map((row) => row.lead_id).filter(Boolean) || []);
+    const { error: deleteError } = await supabase.from("sales_prospects").delete().in("email", emails);
+    if (deleteError) return json(response, 500, { error: deleteError.message });
+    return json(response, 200, { ok: true, removed: emails.length, emails });
   }
 
   if (request.method === "POST" && request.url === "/api/campaigns/generate-drafts") {
@@ -426,6 +570,8 @@ async function handleRequest(request, response) {
     const mailType = body.mailType || "intro_value_prop";
     const sourceList = body.sourceList || "existing";
     const limit = Math.min(Number(body.limit || 50), 100);
+    const selectedProspectIds = Array.isArray(body.prospectIds) ? body.prospectIds.filter(Boolean) : [];
+    const draftInstruction = String(body.draftInstruction || "").trim();
 
     if (sourceList === "new") {
       await runNpmScript(allowedJobs.get("import-leads"));
@@ -447,22 +593,38 @@ async function handleRequest(request, response) {
       .single();
     if (campaignError) return json(response, 500, { error: campaignError.message });
 
-    const { data: prospects, error: prospectError } = await supabase
+    const statusMap = {
+      raw: ["new"],
+      scored: ["scored"],
+      approved: ["verified"],
+      sent: ["sent", "sequence_complete"],
+      followup: ["sent", "followup_due"],
+      existing: ["verified", "scored", "new"]
+    };
+    let prospectQuery = supabase
       .from("sales_prospects")
       .select("*")
-      .eq("segment", segment)
-      .in("prospect_status", sourceList === "followup" ? ["sent", "followup_due"] : ["verified", "scored", "new"])
       .is("unsubscribed_at", null)
       .is("replied_at", null)
       .lt("followup_count", 3)
-      .order("lead_score", { ascending: false, nullsFirst: false })
-      .limit(limit);
+      .order("lead_score", { ascending: false, nullsFirst: false });
+
+    if (selectedProspectIds.length) {
+      prospectQuery = prospectQuery.in("id", selectedProspectIds);
+    } else {
+      prospectQuery = prospectQuery
+        .eq("segment", segment)
+        .in("prospect_status", statusMap[sourceList] || statusMap.existing)
+        .limit(limit);
+    }
+
+    const { data: prospects, error: prospectError } = await prospectQuery;
     if (prospectError) return json(response, 500, { error: prospectError.message });
 
     const drafts = [];
     for (const prospect of prospects || []) {
       const sequenceStep = sourceList === "followup" ? Math.min((prospect.followup_count || 0) + 2, 3) : 1;
-      const draft = buildCampaignDraft(prospect, { mailType, sequenceStep });
+      const draft = buildCampaignDraft(prospect, { mailType, sequenceStep, draftInstruction });
       const saved = await createSalesEmailDraft({
         ...draft,
         campaignId: campaign.id,

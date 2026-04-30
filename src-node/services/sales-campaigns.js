@@ -105,7 +105,7 @@ export function getSegmentTemplate(segment) {
   return segmentTemplates[segment] || segmentTemplates.general_b2b;
 }
 
-export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", sequenceStep = 1, calendarLink = process.env.DEFAULT_MEETING_URL || "" } = {}) {
+export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", sequenceStep = 1, calendarLink = process.env.DEFAULT_MEETING_URL || "", draftInstruction = "" } = {}) {
   const segment = prospect.segment || "general_b2b";
   const template = getSegmentTemplate(segment);
   const firstName = prospect.buyer_name || "there";
@@ -115,6 +115,9 @@ export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", se
   const educationLine = mailType === "educational" ? "\nThe most useful pattern I am seeing: automate the handoff first, then optimize acquisition spend." : "";
   const proofLine = ["case_study", "final_followup"].includes(mailType) ? `\nA similar team used this approach because ${template.proof.toLowerCase()}.` : "";
   const auditLine = mailType === "free_audit" ? "\nI can run a free audit and show exactly where automation would help first." : "";
+  const instructionLine = draftInstruction
+    ? `\nContext to include naturally: ${draftInstruction}`
+    : "";
 
   const subjects = {
     intro_value_prop: `Quick thought on ${company}'s workflow`,
@@ -130,7 +133,7 @@ export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", se
     "",
     `I was looking at ${company} and noticed you may be dealing with ${processName}.`,
     "",
-    `That is exactly where ${template.value} can help.${videoLine}${educationLine}${proofLine}${auditLine}`,
+    `That is exactly where ${template.value} can help.${videoLine}${educationLine}${proofLine}${auditLine}${instructionLine}`,
     "",
     `The goal is simple: fewer missed opportunities, faster follow-up, and a cleaner system your team can actually track.`,
     "",

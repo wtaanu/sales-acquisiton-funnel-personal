@@ -9,18 +9,31 @@ function sanitizeDomain(domain) {
     .trim();
 }
 
-export async function fetchApolloPeople() {
+export async function fetchApolloPeople(overrides = {}) {
   if (!config.apollo.apiKey) {
     throw new Error("APOLLO_API_KEY is not configured.");
   }
 
+  const targetTitles = Array.isArray(overrides.targetTitles) && overrides.targetTitles.length
+    ? overrides.targetTitles
+    : config.apollo.targetTitles;
+  const targetLocations = Array.isArray(overrides.targetLocations) && overrides.targetLocations.length
+    ? overrides.targetLocations
+    : config.apollo.targetLocations;
+  const emailStatus = Array.isArray(overrides.emailStatus) && overrides.emailStatus.length
+    ? overrides.emailStatus
+    : config.apollo.emailStatus;
+  const includeKeywords = Array.isArray(overrides.includeKeywords) && overrides.includeKeywords.length
+    ? overrides.includeKeywords
+    : config.apollo.includeKeywords;
+
   const payload = {
-    page: config.apollo.page,
-    per_page: config.apollo.perPage,
-    person_seniorities: config.apollo.targetTitles,
-    organization_locations: config.apollo.targetLocations,
-    contact_email_status: config.apollo.emailStatus,
-    q_keywords: config.apollo.includeKeywords.join(" ")
+    page: Number(overrides.page || config.apollo.page),
+    per_page: Number(overrides.perPage || config.apollo.perPage),
+    person_seniorities: targetTitles,
+    organization_locations: targetLocations,
+    contact_email_status: emailStatus,
+    q_keywords: includeKeywords.join(" ")
   };
 
   const response = await axios.post("https://api.apollo.io/api/v1/mixed_people/api_search", payload, {
