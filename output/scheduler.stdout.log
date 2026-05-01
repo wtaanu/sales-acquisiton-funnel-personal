@@ -1,0 +1,6 @@
+Active code page: 1252
+
+> anutechlabs-client-acquisition-engine@1.0.0 start
+> node src-node/index.js
+
+{"level":"info","message":"Node.js scheduler started","scheduledJobs":14}
