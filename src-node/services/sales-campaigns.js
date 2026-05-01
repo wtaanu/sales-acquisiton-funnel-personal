@@ -105,46 +105,118 @@ export function getSegmentTemplate(segment) {
   return segmentTemplates[segment] || segmentTemplates.general_b2b;
 }
 
+function parseDraftInstruction(value = "") {
+  const text = String(value || "").trim();
+  if (!text) {
+    return {
+      subject: "",
+      videoUrl: "",
+      freeAuditUrl: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/free-audit` : "https://anutechlabs.company/free-audit",
+      theme: "",
+      notes: ""
+    };
+  }
+
+  const subjectMatch = text.match(/subject:\s*([^\n]+)/i);
+  const urls = [...text.matchAll(/https?:\/\/[^\s)]+/gi)].map((match) => match[0].replace(/[.,;]+$/, ""));
+  const videoUrl = urls.find((url) => /youtu\.?be|youtube\.com/i.test(url)) || "";
+  const freeAuditUrl = urls.find((url) => /free-audit/i.test(url)) || (process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/free-audit` : "https://anutechlabs.company/free-audit");
+  const lower = text.toLowerCase();
+  const theme = lower.includes("salespeople") || lower.includes("salespeople are leaving") || lower.includes("turnover")
+    ? "sales retention and reducing admin load for good salespeople"
+    : lower.includes("video")
+      ? "short educational video"
+      : "";
+
+  return {
+    subject: subjectMatch?.[1]?.trim() || "",
+    videoUrl,
+    freeAuditUrl,
+    theme,
+    notes: text
+      .replace(/subject:\s*[^\n]+/i, "")
+      .replace(/hi\s+\[name\],?/i, "")
+      .replace(/warm regards[\s\S]*/i, "")
+      .trim()
+  };
+}
+
+function buildInstructionAwareBody({ firstName, company, template, mailType, sequenceStep, calendarLink, draftInstruction }) {
+  const instruction = parseDraftInstruction(draftInstruction);
+  const isVideo = mailType === "video_link" || Boolean(instruction.videoUrl);
+  const theme = instruction.theme || "sales automation";
+  const freeAuditUrl = instruction.freeAuditUrl || "https://anutechlabs.company/free-audit";
+  const videoUrl = instruction.videoUrl;
+
+  if (isVideo) {
+    return [
+      `Hi ${firstName},`,
+      "",
+      `Quick question: how much time is ${company}'s sales team losing to admin instead of selling?`,
+      "",
+      "Most sales teams do not lose good opportunities because the team is not capable. They lose them because follow-ups, CRM updates, lead entry, and reminders quietly eat the week.",
+      "",
+      videoUrl
+        ? `I recorded a short video on this exact problem: ${videoUrl}`
+        : "I recorded a short video on this exact problem and how automation can reduce the admin load.",
+      "",
+      `The useful idea is simple: protect your best salespeople from repetitive work so they can spend more time selling, following up faster, and keeping every opportunity visible.`,
+      "",
+      `If you want to see your specific opportunity, you can run the free audit here: ${freeAuditUrl}`,
+      "",
+      sequenceStep >= 3
+        ? `If it makes sense to talk after that, here is the booking link: ${calendarLink || "[Calendar link]"}`
+        : template.cta,
+      "",
+      "Warm regards,",
+      config.defaultSignatureName || "Anuragini Pathak",
+      config.defaultSignatureCompany || "Anutech Labs"
+    ].join("\n");
+  }
+
+  const educationLine = mailType === "educational" ? "\nThe most useful pattern I am seeing: automate the handoff first, then optimize acquisition spend." : "";
+  const proofLine = ["case_study", "final_followup"].includes(mailType) ? `\nA similar team used this approach because ${template.proof.toLowerCase()}.` : "";
+  const auditLine = mailType === "free_audit" ? `\nI can run a free audit and show exactly where automation would help first: ${freeAuditUrl}` : "";
+
+  return [
+    `Hi ${firstName},`,
+    "",
+    `I was looking at ${company} and noticed you may be dealing with ${template.problem}.`,
+    "",
+    `That is exactly where ${template.value} can help.${educationLine}${proofLine}${auditLine}`,
+    "",
+    `The goal is simple: fewer missed opportunities, faster follow-up, and a cleaner system your team can actually track.`,
+    "",
+    theme ? `The angle I would focus on first is ${theme}.` : "",
+    theme ? "" : "",
+    sequenceStep >= 3
+      ? `I am keeping this as my last note. If useful, here is the booking link: ${calendarLink || "[Calendar link]"}`
+      : template.cta,
+    "",
+    "Warm regards,",
+    config.defaultSignatureName || "Anuragini Pathak",
+    config.defaultSignatureCompany || "Anutech Labs"
+  ].filter((line, index, all) => line || all[index - 1]).join("\n");
+}
+
 export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", sequenceStep = 1, calendarLink = process.env.DEFAULT_MEETING_URL || "", draftInstruction = "" } = {}) {
   const segment = prospect.segment || "general_b2b";
   const template = getSegmentTemplate(segment);
   const firstName = prospect.buyer_name || "there";
   const company = prospect.company_name || "your company";
   const processName = template.problem;
-  const videoLine = mailType === "video_link" ? "\nI also recorded a short walkthrough showing how this workflow would look in practice." : "";
-  const educationLine = mailType === "educational" ? "\nThe most useful pattern I am seeing: automate the handoff first, then optimize acquisition spend." : "";
-  const proofLine = ["case_study", "final_followup"].includes(mailType) ? `\nA similar team used this approach because ${template.proof.toLowerCase()}.` : "";
-  const auditLine = mailType === "free_audit" ? "\nI can run a free audit and show exactly where automation would help first." : "";
-  const instructionLine = draftInstruction
-    ? `\nContext to include naturally: ${draftInstruction}`
-    : "";
+  const instruction = parseDraftInstruction(draftInstruction);
 
   const subjects = {
     intro_value_prop: `Quick thought on ${company}'s workflow`,
-    video_link: `Short video idea for ${company}`,
+    video_link: instruction.subject || `Short video idea for ${company}`,
     educational: `A useful automation idea for ${company}`,
     case_study: `Re: ${company}'s workflow`,
     free_audit: `Free audit for ${company}`,
     final_followup: "Last message"
   };
 
-  const text = [
-    `Hi ${firstName},`,
-    "",
-    `I was looking at ${company} and noticed you may be dealing with ${processName}.`,
-    "",
-    `That is exactly where ${template.value} can help.${videoLine}${educationLine}${proofLine}${auditLine}${instructionLine}`,
-    "",
-    `The goal is simple: fewer missed opportunities, faster follow-up, and a cleaner system your team can actually track.`,
-    "",
-    sequenceStep >= 3
-      ? `I am keeping this as my last note. If useful, here is the booking link: ${calendarLink || "[Calendar link]"}`
-      : template.cta,
-    "",
-    "Warm regards,",
-    config.defaultSignatureName || "Anuragini",
-    config.defaultSignatureCompany || "Anutech Labs"
-  ].join("\n");
+  const text = buildInstructionAwareBody({ firstName, company, template, mailType, sequenceStep, calendarLink, draftInstruction });
 
   const html = text
     .split("\n")
@@ -163,7 +235,13 @@ export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", se
       processName,
       pain: processName,
       segment,
-      mailType
+      mailType,
+      instruction: {
+        subject: instruction.subject,
+        videoUrl: instruction.videoUrl,
+        freeAuditUrl: instruction.freeAuditUrl,
+        theme: instruction.theme
+      }
     }
   };
 }

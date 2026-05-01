@@ -221,12 +221,35 @@ export async function getSalesDashboardData() {
     supabase.from("sales_segments").select("*").eq("is_active", true).order("created_at", { ascending: false })
   ]);
 
+  const prospectSegments = Object.values((prospects.data || []).reduce((acc, prospect) => {
+    const segment = prospect.segment || "general_b2b";
+    if (!acc[segment]) {
+      acc[segment] = {
+        id: segment,
+        label: segment
+          .split(/[_-]+/)
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" "),
+        targetCount: 0,
+        apolloKeywords: prospect.industry || segment,
+        titles: prospect.buyer_title || ""
+      };
+    }
+    acc[segment].targetCount += 1;
+    if (prospect.buyer_title && !String(acc[segment].titles || "").includes(prospect.buyer_title)) {
+      acc[segment].titles = [acc[segment].titles, prospect.buyer_title].filter(Boolean).join(",");
+    }
+    return acc;
+  }, {}));
+
   return {
     prospects: prospects.data || [],
     drafts: drafts.data || [],
     replies: replies.data || [],
     events: events.data || [],
     customSegments: customSegments.data || [],
+    prospectSegments,
     stats: summarizeSalesFunnel(prospects.data || [], drafts.data || [], replies.data || [], events.data || []),
     error: prospects.error?.message || drafts.error?.message || replies.error?.message || events.error?.message || customSegments.error?.message || ""
   };

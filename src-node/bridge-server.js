@@ -423,16 +423,21 @@ async function handleRequest(request, response) {
 
   if (request.method === "GET" && request.url === "/api/sales-dashboard") {
     const dashboard = await getSalesDashboardData();
-    const allSegments = [
-      ...segments,
-      ...(dashboard.customSegments || []).map((segment) => ({
+    const prospectSegments = dashboard.prospectSegments || [];
+    const customSegments = (dashboard.customSegments || []).map((segment) => ({
         id: segment.segment_id,
         label: segment.label,
         targetCount: segment.target_count,
         apolloKeywords: segment.apollo_keywords,
         titles: segment.target_titles
-      }))
-    ];
+      }));
+    const fallbackSegments = [...customSegments, ...segments];
+    const allSegments = prospectSegments.length
+      ? [
+          ...prospectSegments,
+          ...fallbackSegments.filter((segment) => !prospectSegments.some((item) => item.id === segment.id))
+        ]
+      : fallbackSegments;
     return json(response, dashboard.error ? 500 : 200, {
       ok: !dashboard.error,
       segments: allSegments,
