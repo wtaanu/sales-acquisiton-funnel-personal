@@ -4,3 +4,7 @@ Active code page: 1252
 > node src-node/index.js
 
 {"level":"info","message":"Node.js scheduler started","scheduledJobs":14}
+{"level":"info","message":"Running scheduled job","jobName":"score-leads","schedule":"*/30 * * * *"}
+{"level":"info","message":"Scored leads","count":0,"createdCount":0,"updatedCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"verify-emails","schedule":"15,45 * * * *"}
+{"level":"info","message":"Verified scored leads","processed":0,"movedToApproved":0,"minimumScore":90}
