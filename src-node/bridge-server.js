@@ -231,10 +231,65 @@ function emailProviderSummary() {
 }
 
 async function sendTransactionalMail(message) {
+  const brandedMessage = {
+    ...message,
+    html: buildBrandedEmailHtml(message.html || textToHtml(message.text || ""), message.subject || "Anutech Labs")
+  };
   if (canSendWithResend()) {
-    return sendResendMail(message);
+    return sendResendMail(brandedMessage);
   }
-  return sendMail(message);
+  return sendMail(brandedMessage);
+}
+
+function textToHtml(value = "") {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line ? `<p>${escapeHtml(line)}</p>` : "<br />")
+    .join("");
+}
+
+function buildBrandedEmailHtml(innerHtml = "", subject = "Anutech Labs") {
+  if (/data-anutech-branded=["']true["']/i.test(innerHtml)) {
+    return innerHtml;
+  }
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://anutechlabs.company";
+  const logoUrl = config.logoUrl || process.env.BRAND_LOGO_URL || `${siteUrl}/anutechlabs-logo.png`;
+  return `<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f4f6f8;color:#111827;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6f8;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="640" cellspacing="0" cellpadding="0" data-anutech-branded="true" style="width:640px;max-width:100%;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="background:#111827;padding:20px 24px;border-bottom:4px solid #f97316;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="left"><img src="${escapeHtml(logoUrl)}" alt="Anutech Labs" style="display:block;max-height:48px;width:auto;"></td>
+                  <td align="right" style="color:#fdba74;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;">AI SDR</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 30px;font-size:15px;line-height:1.7;color:#24324a;">
+              <div style="font-size:12px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px;">${escapeHtml(subject)}</div>
+              ${innerHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#fff7ed;padding:18px 30px;border-top:1px solid #fed7aa;font-size:13px;line-height:1.6;color:#7c2d12;">
+              <strong>Thanks &amp; Regards,<br>AI SDR- Anutech Labs</strong><br>
+              Website: <a href="${siteUrl}/" style="color:#ea580c;">${siteUrl}/</a><br>
+              <a href="${siteUrl}/unsubscribe" style="color:#ea580c;">Unsubscribe</a> · <a href="${siteUrl}/privacy" style="color:#ea580c;">Privacy policy</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 function normalizeSheetRow(row) {
@@ -650,13 +705,28 @@ async function handleRequest(request, response) {
     const body = await readBody(request);
     const supabase = getSharedSupabaseClient();
     if (!supabase) return json(response, 500, { error: "Shared Supabase is not configured." });
+
+    const draftIds = Array.isArray(body.draftIds) ? body.draftIds.filter(Boolean) : [];
+    if (draftIds.length) {
+      const reviewedAt = nowIso();
+      const { data, error } = await supabase
+        .from("sales_email_drafts")
+        .update({
+          draft_status: body.status || "reviewed",
+          review_notes: body.reviewNotes || "Bulk reviewed from AI SDR admin dashboard.",
+          updated_at: reviewedAt
+        })
+        .in("id", draftIds)
+        .select("*");
+      return json(response, error ? 500 : 200, error ? { error: error.message } : { ok: true, reviewed: data?.length || 0, drafts: data || [] });
+    }
+
     const { data, error } = await supabase
       .from("sales_email_drafts")
       .update({
-        subject_line: body.subjectLine,
-        email_body_text: body.emailBodyText,
-        email_body_html: body.emailBodyHtml,
-        preview_html: body.previewHtml || body.emailBodyHtml,
+        ...(body.subjectLine ? { subject_line: body.subjectLine } : {}),
+        ...(body.emailBodyText ? { email_body_text: body.emailBodyText } : {}),
+        ...(body.emailBodyHtml ? { email_body_html: body.emailBodyHtml, preview_html: body.previewHtml || body.emailBodyHtml } : {}),
         draft_status: body.status || "reviewed",
         review_notes: body.reviewNotes || null,
         updated_at: nowIso()
@@ -675,6 +745,82 @@ async function handleRequest(request, response) {
       return json(response, 409, { error: "Weekend sending is blocked. Warm outreach sends only Monday-Friday." });
     }
     if (!canSendWithResend() && !canSendEmail()) return json(response, 500, { error: "No email provider is configured." });
+
+    const draftIds = Array.isArray(body.draftIds) ? body.draftIds.filter(Boolean) : [];
+    if (draftIds.length) {
+      const results = [];
+      for (const draftId of draftIds) {
+        const { data: draft, error } = await supabase
+          .from("sales_email_drafts")
+          .select("*, sales_prospects(*)")
+          .eq("id", draftId)
+          .single();
+
+        if (error || !draft) {
+          results.push({ draftId, ok: false, error: error?.message || "Draft not found." });
+          continue;
+        }
+        if (!["reviewed", "ready"].includes(draft.draft_status)) {
+          results.push({ draftId, ok: false, error: "Draft is not ready for sending." });
+          continue;
+        }
+
+        const prospect = Array.isArray(draft.sales_prospects) ? draft.sales_prospects[0] : draft.sales_prospects;
+        if (!prospect || prospect.unsubscribed_at || prospect.replied_at || Number(prospect.followup_count || 0) >= 3) {
+          results.push({ draftId, ok: false, error: "Prospect is not eligible for sending." });
+          continue;
+        }
+
+        try {
+          const result = await sendTransactionalMail({
+            to: prospect.email,
+            subject: draft.subject_line,
+            text: draft.email_body_text,
+            html: draft.email_body_html,
+            headers: {
+              "X-Anutech-Draft-Source": "sales_campaign",
+              "X-Anutech-Source-Record-Id": prospect.lead_id
+            }
+          });
+          const sentAt = nowIso();
+          await supabase.from("sales_email_drafts").update({
+            draft_status: "sent",
+            send_result: "sent",
+            provider_message_id: result.messageId,
+            sent_at: sentAt,
+            updated_at: sentAt
+          }).eq("id", draft.id);
+          await supabase.from("sales_prospects").update({
+            prospect_status: draft.sequence_step >= 3 ? "sequence_complete" : "sent",
+            sequence_step: draft.sequence_step,
+            followup_count: Math.max(Number(prospect.followup_count || 0), draft.sequence_step - 1),
+            last_sent_at: sentAt,
+            next_followup_at: draft.sequence_step < 3 ? new Date(Date.now() + (draft.sequence_step === 1 ? 4 : 5) * 24 * 60 * 60 * 1000).toISOString() : null,
+            updated_at: sentAt
+          }).eq("id", prospect.id);
+          await logSharedSendEvent({
+            draftId: draft.draft_id,
+            draftSource: "sales_campaign",
+            sourceRecordId: prospect.lead_id,
+            email: prospect.email,
+            subjectLine: draft.subject_line,
+            eventType: "sent",
+            providerMessageId: result.messageId,
+            detail: `Sent through Sales Tool campaign dashboard via ${result.provider || "smtp"}.`
+          });
+          results.push({ draftId, ok: true, provider: result.provider || "smtp", messageId: result.messageId, email: prospect.email });
+        } catch (error) {
+          results.push({ draftId, ok: false, error: error instanceof Error ? error.message : "Send failed." });
+        }
+      }
+
+      return json(response, 200, {
+        ok: results.some((result) => result.ok),
+        sent: results.filter((result) => result.ok).length,
+        failed: results.filter((result) => !result.ok).length,
+        results
+      });
+    }
 
     const { data: draft, error } = await supabase
       .from("sales_email_drafts")
