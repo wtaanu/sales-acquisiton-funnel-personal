@@ -592,3 +592,9 @@ Active code page: 1252
 {"level":20,"time":1777872604467,"pid":1332,"hostname":"LAPTOP-J6003DP7","component":"imap-connection","cid":"peyv2stgmud8kzx1211l","src":"s","msg":"B OK Logout completed (0.001 + 0.000 secs).","cid":"peyv2stgmud8kzx1211l"}
 {"level":10,"time":1777872604467,"pid":1332,"hostname":"LAPTOP-J6003DP7","component":"imap-connection","cid":"peyv2stgmud8kzx1211l","msg":"Connection closed","cid":"peyv2stgmud8kzx1211l"}
 {"level":"info","message":"Captured inbox replies","fetchedCount":0,"matchedCount":0,"inboundSaved":0,"replyDraftsCreated":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
