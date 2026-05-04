@@ -330,7 +330,10 @@ function apolloFiltersFromBody(body = {}) {
     targetTitles: commaList(body.targetTitles, config.apollo.targetTitles),
     targetLocations: commaList(body.targetLocations, config.apollo.targetLocations),
     emailStatus: commaList(body.emailStatus, config.apollo.emailStatus),
-    includeKeywords: commaList(body.includeKeywords || body.keywords, config.apollo.includeKeywords)
+    includeKeywords: commaList(body.includeKeywords || body.keywords, config.apollo.includeKeywords),
+    companySize: commaList(body.companySize || body.companySizeRanges),
+    excludeKeywords: commaList(body.excludeKeywords || body.exclude),
+    revenue: commaList(body.revenue || body.revenueRanges)
   };
 }
 
@@ -810,7 +813,28 @@ async function handleRequest(request, response) {
           });
           results.push({ draftId, ok: true, provider: result.provider || "smtp", messageId: result.messageId, email: prospect.email });
         } catch (error) {
-          results.push({ draftId, ok: false, error: error instanceof Error ? error.message : "Send failed." });
+          const detail = error instanceof Error ? error.message : "Send failed.";
+          const failedAt = nowIso();
+          await supabase.from("sales_email_drafts").update({
+            draft_status: "failed",
+            send_result: "failed",
+            updated_at: failedAt
+          }).eq("id", draft.id);
+          await supabase.from("sales_prospects").update({
+            prospect_status: "failed",
+            verification_notes: detail,
+            updated_at: failedAt
+          }).eq("id", prospect.id);
+          await logSharedSendEvent({
+            draftId: draft.draft_id,
+            draftSource: "sales_campaign",
+            sourceRecordId: prospect.lead_id,
+            email: prospect.email,
+            subjectLine: draft.subject_line,
+            eventType: "failed",
+            detail
+          });
+          results.push({ draftId, ok: false, error: detail, email: prospect.email });
         }
       }
 
@@ -834,16 +858,42 @@ async function handleRequest(request, response) {
       return json(response, 400, { error: "Prospect is not eligible for sending." });
     }
 
-    const result = await sendTransactionalMail({
-      to: prospect.email,
-      subject: draft.subject_line,
-      text: draft.email_body_text,
-      html: draft.email_body_html,
-      headers: {
-        "X-Anutech-Draft-Source": "sales_campaign",
-        "X-Anutech-Source-Record-Id": prospect.lead_id
-      }
-    });
+    let result;
+    try {
+      result = await sendTransactionalMail({
+        to: prospect.email,
+        subject: draft.subject_line,
+        text: draft.email_body_text,
+        html: draft.email_body_html,
+        headers: {
+          "X-Anutech-Draft-Source": "sales_campaign",
+          "X-Anutech-Source-Record-Id": prospect.lead_id
+        }
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "Send failed.";
+      const failedAt = nowIso();
+      await supabase.from("sales_email_drafts").update({
+        draft_status: "failed",
+        send_result: "failed",
+        updated_at: failedAt
+      }).eq("id", draft.id);
+      await supabase.from("sales_prospects").update({
+        prospect_status: "failed",
+        verification_notes: detail,
+        updated_at: failedAt
+      }).eq("id", prospect.id);
+      await logSharedSendEvent({
+        draftId: draft.draft_id,
+        draftSource: "sales_campaign",
+        sourceRecordId: prospect.lead_id,
+        email: prospect.email,
+        subjectLine: draft.subject_line,
+        eventType: "failed",
+        detail
+      });
+      return json(response, 500, { ok: false, sent: false, failed: 1, error: detail, email: prospect.email });
+    }
     const sentAt = nowIso();
     await supabase.from("sales_email_drafts").update({
       draft_status: "sent",

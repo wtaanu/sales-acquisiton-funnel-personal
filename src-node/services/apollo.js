@@ -26,6 +26,9 @@ export async function fetchApolloPeople(overrides = {}) {
   const includeKeywords = Array.isArray(overrides.includeKeywords) && overrides.includeKeywords.length
     ? overrides.includeKeywords
     : config.apollo.includeKeywords;
+  const companySize = Array.isArray(overrides.companySize) ? overrides.companySize.filter(Boolean) : [];
+  const excludeKeywords = Array.isArray(overrides.excludeKeywords) ? overrides.excludeKeywords.filter(Boolean) : [];
+  const revenue = Array.isArray(overrides.revenue) ? overrides.revenue.filter(Boolean) : [];
 
   const payload = {
     page: Number(overrides.page || config.apollo.page),
@@ -35,6 +38,15 @@ export async function fetchApolloPeople(overrides = {}) {
     contact_email_status: emailStatus,
     q_keywords: includeKeywords.join(" ")
   };
+  if (companySize.length) {
+    payload.organization_num_employees_ranges = companySize;
+  }
+  if (excludeKeywords.length) {
+    payload.q_not_keywords = excludeKeywords.join(" ");
+  }
+  if (revenue.length) {
+    payload.organization_revenue_ranges = revenue;
+  }
 
   const response = await axios.post("https://api.apollo.io/api/v1/mixed_people/api_search", payload, {
     headers: {
