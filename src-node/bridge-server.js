@@ -327,6 +327,7 @@ function apolloFiltersFromBody(body = {}) {
   return {
     page: Number(body.page || config.apollo.page),
     perPage: Number(body.perPage || config.apollo.perPage),
+    pagesToPull: Math.max(1, Math.min(Number(body.pagesToPull || body.pages || 1), 10)),
     targetTitles: commaList(body.targetTitles, config.apollo.targetTitles),
     targetLocations: commaList(body.targetLocations, config.apollo.targetLocations),
     emailStatus: commaList(body.emailStatus, config.apollo.emailStatus),
@@ -334,6 +335,16 @@ function apolloFiltersFromBody(body = {}) {
     companySize: commaList(body.companySize || body.companySizeRanges),
     excludeKeywords: commaList(body.excludeKeywords || body.exclude),
     revenue: commaList(body.revenue || body.revenueRanges)
+  };
+}
+
+async function getExistingProspectKeysFromSupabase() {
+  const supabase = getSharedSupabaseClient();
+  if (!supabase) return { leadIds: new Set(), emails: new Set() };
+  const { data } = await supabase.from("sales_prospects").select("lead_id,email").limit(10000);
+  return {
+    leadIds: new Set((data || []).map((row) => row.lead_id).filter(Boolean)),
+    emails: new Set((data || []).map((row) => row.email).filter(Boolean))
   };
 }
 
@@ -550,15 +561,41 @@ async function handleRequest(request, response) {
       const timestamp = nowIso();
       const existingRawRows = await readSheet(config.sheetTabs.rawLeads).catch(() => []);
       const existingLeadIds = new Set(existingRawRows.map((row) => row.lead_id).filter(Boolean));
-      const people = await fetchApolloPeople(filters);
-      const rawRows = people
-        .map((row) => mapApolloRowToRawLead(row, timestamp))
-        .filter((row) => row.email && !existingLeadIds.has(row.lead_id));
+      const existingEmails = new Set(existingRawRows.map((row) => String(row.email || row.Email || "").trim().toLowerCase()).filter(Boolean));
+      const supabaseKeys = await getExistingProspectKeysFromSupabase();
+      for (const leadId of supabaseKeys.leadIds) existingLeadIds.add(leadId);
+      for (const email of supabaseKeys.emails) existingEmails.add(email);
+
+      const rawRows = [];
+      const pagesPulled = [];
+      let duplicatesSkipped = 0;
+      for (let offset = 0; offset < filters.pagesToPull; offset += 1) {
+        const page = filters.page + offset;
+        const people = await fetchApolloPeople({ ...filters, page });
+        pagesPulled.push(page);
+        for (const person of people) {
+          const row = mapApolloRowToRawLead(person, timestamp);
+          if (!row.email || existingLeadIds.has(row.lead_id) || existingEmails.has(row.email)) {
+            duplicatesSkipped += 1;
+            continue;
+          }
+          existingLeadIds.add(row.lead_id);
+          existingEmails.add(row.email);
+          rawRows.push(row);
+        }
+      }
 
       if (rawRows.length) {
         await appendRows(config.sheetTabs.rawLeads, rawRows.map((row) => rawLeadColumns.map((column) => row[column] || "")));
+        await Promise.all(rawRows.map((row) => upsertSalesProspect({
+          ...row,
+          prospect_status: "new",
+          segment: body.segment || row.segment || undefined,
+          lead_score: 0,
+          raw_payload: row
+        })));
       }
-      runResults.push({ job: "apollo-direct-import", code: 0, imported: rawRows.length, filters });
+      runResults.push({ job: "apollo-direct-import", code: 0, imported: rawRows.length, duplicatesSkipped, pagesPulled, filters });
 
       for (const job of ["score-leads", "verify-emails"]) {
         const script = allowedJobs.get(job);
@@ -580,7 +617,19 @@ async function handleRequest(request, response) {
     }
 
     const migration = await mirrorSheetProspectsToSupabase();
-    return json(response, 200, { ok: true, mode: body.mode || "new", apolloFilters: filters, jobs: runResults, migrated: migration.migrated, migration });
+    const importJob = runResults.find((job) => job.job === "apollo-direct-import") || {};
+    return json(response, 200, {
+      ok: true,
+      mode: body.mode || "new",
+      apolloFilters: filters,
+      pagesPulled: importJob.pagesPulled || [],
+      imported: importJob.imported || 0,
+      duplicatesSkipped: importJob.duplicatesSkipped || 0,
+      nextPage: filters.page + filters.pagesToPull,
+      jobs: runResults,
+      migrated: migration.migrated,
+      migration
+    });
   }
 
   if (request.method === "POST" && request.url === "/api/prospects/manual") {

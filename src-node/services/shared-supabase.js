@@ -214,7 +214,7 @@ export async function getSalesDashboardData() {
   }
 
   const [prospects, drafts, replies, events, customSegments] = await Promise.all([
-    supabase.from("sales_prospects").select("*").order("updated_at", { ascending: false }).limit(200),
+    supabase.from("sales_prospects").select("*").order("updated_at", { ascending: false }).limit(1000),
     supabase.from("sales_email_drafts").select("*, sales_prospects(company_name,buyer_name,email,industry,segment,prospect_status,followup_count)").order("updated_at", { ascending: false }).limit(100),
     supabase.from("sales_inbox_replies").select("*").order("created_at", { ascending: false }).limit(100),
     supabase.from("client_acquisition_email_events").select("*").order("created_at", { ascending: false }).limit(100),
