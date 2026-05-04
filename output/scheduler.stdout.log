@@ -170,3 +170,15 @@ Active code page: 1252
 {"level":20,"time":1777865406719,"pid":1332,"hostname":"LAPTOP-J6003DP7","component":"imap-connection","cid":"ixoiok11mh0rz8a5u2p8","src":"s","msg":"C OK Logout completed (0.001 + 0.000 secs).","cid":"ixoiok11mh0rz8a5u2p8"}
 {"level":10,"time":1777865406722,"pid":1332,"hostname":"LAPTOP-J6003DP7","component":"imap-connection","cid":"ixoiok11mh0rz8a5u2p8","msg":"Connection closed","cid":"ixoiok11mh0rz8a5u2p8"}
 {"level":"info","message":"Captured inbox replies","fetchedCount":1,"matchedCount":0,"inboundSaved":0,"replyDraftsCreated":0}
+{"level":"info","message":"Running scheduled job","jobName":"build-company-intel","schedule":"5 * * * *"}
+{"level":"info","message":"Built company intelligence snapshot","companyCount":106,"rawLeadCount":114,"scoredLeadCount":114,"approvedLeadCount":194}
+{"level":"info","message":"Running scheduled job","jobName":"build-enrichment-addons","schedule":"6 * * * *"}
+{"level":"info","message":"Built enrichment add-ons","companyCount":106}
+{"level":"info","message":"Running scheduled job","jobName":"build-watchlists","schedule":"7 * * * *"}
+{"level":"info","message":"Built watchlists from saved searches","savedSearchCount":4,"matchedCompanies":122}
+{"level":"info","message":"Running scheduled job","jobName":"generate-account-alerts","schedule":"10 * * * *"}
+{"level":"info","message":"Generated account alerts","openAlertCount":87,"resolvedAlertCount":0}
+{"level":"info","message":"Running scheduled job","jobName":"sync-crm-records","schedule":"12 * * * *"}
+{"level":"info","message":"Prepared CRM sync records","companyCount":106,"crmName":"personal_crm"}
+{"level":"info","message":"Running scheduled job","jobName":"build-crm-export-ready","schedule":"14 * * * *"}
+{"level":"info","message":"Built CRM export-ready rows","crmName":"personal_crm","exportCount":106}
