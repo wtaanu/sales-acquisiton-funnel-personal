@@ -142,20 +142,60 @@ function parseDraftInstruction(value = "") {
   };
 }
 
+function inferVertical(prospect) {
+  const industry = String(prospect.industry || "").trim();
+  const segment = String(prospect.segment || "").replace(/[_-]+/g, " ").trim();
+  const title = String(prospect.buyer_title || "").trim();
+
+  if (industry) return industry;
+  if (segment && segment !== "general b2b") return segment;
+  if (/agency|marketing|growth|service/i.test(`${industry} ${segment} ${title}`)) return "service businesses";
+  if (/saas|software/i.test(`${industry} ${segment}`)) return "SaaS companies";
+  if (/ecommerce|retail/i.test(`${industry} ${segment}`)) return "e-commerce brands";
+  return "businesses like your clients";
+}
+
+function replaceBracketPlaceholder(match, { name, company, prospect, calendarLink, freeAuditUrl, vertical }) {
+  const key = String(match || "").replace(/^\[|\]$/g, "").toLowerCase();
+
+  if (key.includes("agency") || key.includes("company") || key.includes("client name") || key.includes("business name")) {
+    return company;
+  }
+
+  if (key.includes("specific client") || key.includes("vertical") || key.includes("niche") || key.includes("industry")) {
+    return vertical;
+  }
+
+  if (key.includes("calendar")) return calendarLink || "https://calendly.com/anutechlabs-anulogic/30min";
+  if (key.includes("audit")) return freeAuditUrl || "https://anutechlabs.company/free-audit";
+  if (key.includes("title") || key.includes("role")) return prospect.buyer_title || "your role";
+  if (key.includes("name")) return name;
+
+  return match;
+}
+
 function replacePlaceholders(text, { firstName, company, prospect, calendarLink, freeAuditUrl }) {
   const name = firstName && firstName !== "there" ? firstName : "there";
+  const vertical = inferVertical(prospect);
   return String(text || "")
     .replace(/\{\{\s*first_name\s*\}\}/gi, name)
     .replace(/\{\{\s*name\s*\}\}/gi, name)
     .replace(/\[Name\]/g, name)
+    .replace(/\[First Name\]/gi, name)
     .replace(/\{\{\s*company\s*\}\}/gi, company)
     .replace(/\[Company\]/g, company)
+    .replace(/\[Company Name\]/gi, company)
+    .replace(/\[Agency Name\]/gi, company)
     .replace(/\{\{\s*company_name\s*\}\}/gi, company)
-    .replace(/\{\{\s*industry\s*\}\}/gi, prospect.industry || "your industry")
+    .replace(/\{\{\s*agency_name\s*\}\}/gi, company)
+    .replace(/\{\{\s*industry\s*\}\}/gi, prospect.industry || vertical)
+    .replace(/\{\{\s*vertical\s*\}\}/gi, vertical)
+    .replace(/\{\{\s*niche\s*\}\}/gi, vertical)
     .replace(/\{\{\s*title\s*\}\}/gi, prospect.buyer_title || "your role")
     .replace(/\{\{\s*calendar_link\s*\}\}/gi, calendarLink || "")
     .replace(/\[Calendar link\]/g, calendarLink || "[Calendar link]")
-    .replace(/\{\{\s*free_audit_url\s*\}\}/gi, freeAuditUrl || "https://anutechlabs.company/free-audit");
+    .replace(/\{\{\s*free_audit_url\s*\}\}/gi, freeAuditUrl || "https://anutechlabs.company/free-audit")
+    .replace(/\[[^\]]+\]/g, (match) => replaceBracketPlaceholder(match, { name, company, prospect, calendarLink, freeAuditUrl, vertical }));
 }
 
 function buildCustomInstructionBody({ firstName, company, prospect, draftInstruction, calendarLink }) {
