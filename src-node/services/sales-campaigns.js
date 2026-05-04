@@ -50,6 +50,7 @@ export function slugifySegment(value) {
 
 export const mailTypes = [
   { id: "intro_value_prop", label: "Introduction + value prop" },
+  { id: "custom_instruction", label: "Custom pasted email logic" },
   { id: "video_link", label: "Video link email" },
   { id: "educational", label: "Educational email" },
   { id: "case_study", label: "Social proof / case study" },
@@ -141,6 +142,43 @@ function parseDraftInstruction(value = "") {
   };
 }
 
+function replacePlaceholders(text, { firstName, company, prospect, calendarLink, freeAuditUrl }) {
+  const name = firstName && firstName !== "there" ? firstName : "there";
+  return String(text || "")
+    .replace(/\{\{\s*first_name\s*\}\}/gi, name)
+    .replace(/\{\{\s*name\s*\}\}/gi, name)
+    .replace(/\[Name\]/g, name)
+    .replace(/\{\{\s*company\s*\}\}/gi, company)
+    .replace(/\[Company\]/g, company)
+    .replace(/\{\{\s*company_name\s*\}\}/gi, company)
+    .replace(/\{\{\s*industry\s*\}\}/gi, prospect.industry || "your industry")
+    .replace(/\{\{\s*title\s*\}\}/gi, prospect.buyer_title || "your role")
+    .replace(/\{\{\s*calendar_link\s*\}\}/gi, calendarLink || "")
+    .replace(/\[Calendar link\]/g, calendarLink || "[Calendar link]")
+    .replace(/\{\{\s*free_audit_url\s*\}\}/gi, freeAuditUrl || "https://anutechlabs.company/free-audit");
+}
+
+function buildCustomInstructionBody({ firstName, company, prospect, draftInstruction, calendarLink }) {
+  const instruction = parseDraftInstruction(draftInstruction);
+  const freeAuditUrl = instruction.freeAuditUrl || "https://anutechlabs.company/free-audit";
+  const cleaned = instruction.notes || String(draftInstruction || "").trim();
+  const withoutSubject = cleaned
+    .replace(/subject:\s*[^\n]+/i, "")
+    .replace(/thanks\s*&\s*regards[\s\S]*/i, "")
+    .replace(/warm regards[\s\S]*/i, "")
+    .trim();
+  const body = withoutSubject || "I wanted to share a quick idea on how automation can reduce manual sales work and recover missed opportunities.";
+  const personalized = replacePlaceholders(body, { firstName, company, prospect, calendarLink, freeAuditUrl });
+
+  return [
+    personalized.match(/^hi\s+/i) ? personalized : `Hi ${firstName},\n\n${personalized}`,
+    "",
+    "Thanks & Regards,",
+    "AI SDR- Anutech Labs",
+    "Website: https://anutechlabs.company/"
+  ].join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
 function buildInstructionAwareBody({ firstName, company, template, mailType, sequenceStep, calendarLink, draftInstruction }) {
   const instruction = parseDraftInstruction(draftInstruction);
   const isVideo = mailType === "video_link" || Boolean(instruction.videoUrl);
@@ -209,6 +247,7 @@ export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", se
 
   const subjects = {
     intro_value_prop: `Quick thought on ${company}'s workflow`,
+    custom_instruction: instruction.subject || `Quick idea for ${company}`,
     video_link: instruction.subject || `Short video idea for ${company}`,
     educational: `A useful automation idea for ${company}`,
     case_study: `Re: ${company}'s workflow`,
@@ -216,7 +255,9 @@ export function buildCampaignDraft(prospect, { mailType = "intro_value_prop", se
     final_followup: "Last message"
   };
 
-  const text = buildInstructionAwareBody({ firstName, company, template, mailType, sequenceStep, calendarLink, draftInstruction });
+  const text = mailType === "custom_instruction"
+    ? buildCustomInstructionBody({ firstName, company, prospect, draftInstruction, calendarLink })
+    : buildInstructionAwareBody({ firstName, company, template, mailType, sequenceStep, calendarLink, draftInstruction });
 
   const html = text
     .split("\n")
