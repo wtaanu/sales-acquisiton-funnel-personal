@@ -9,6 +9,40 @@ function sanitizeDomain(domain) {
     .trim();
 }
 
+function cleanToken(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
+}
+
+function clampPerPage(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return config.apollo.perPage;
+  return Math.max(1, Math.min(Math.trunc(number), 100));
+}
+
+function normalizeNumber(value) {
+  const raw = String(value || "").trim().toUpperCase().replace(/[$,\s]/g, "");
+  if (!raw) return "";
+  const match = raw.match(/^(\d+(?:\.\d+)?)(K|M|B)?$/);
+  if (!match) return raw.replace(/[^0-9.]/g, "");
+  const amount = Number(match[1]);
+  const multiplier = match[2] === "B" ? 1000000000 : match[2] === "M" ? 1000000 : match[2] === "K" ? 1000 : 1;
+  return String(Math.round(amount * multiplier));
+}
+
+function normalizeRange(value) {
+  const cleaned = cleanToken(value);
+  if (!cleaned) return "";
+  const parts = cleaned.split(/\s*[-–—]\s*/).map(normalizeNumber).filter(Boolean);
+  return parts.length === 2 ? `${parts[0]},${parts[1]}` : cleaned;
+}
+
+function normalizeEmailStatus(value) {
+  return cleanToken(value).toLowerCase().replace(/\s+/g, "_");
+}
+
 export async function fetchApolloPeople(overrides = {}) {
   if (!config.apollo.apiKey) {
     throw new Error("APOLLO_API_KEY is not configured.");
@@ -26,17 +60,17 @@ export async function fetchApolloPeople(overrides = {}) {
   const includeKeywords = Array.isArray(overrides.includeKeywords) && overrides.includeKeywords.length
     ? overrides.includeKeywords
     : config.apollo.includeKeywords;
-  const companySize = Array.isArray(overrides.companySize) ? overrides.companySize.filter(Boolean) : [];
-  const excludeKeywords = Array.isArray(overrides.excludeKeywords) ? overrides.excludeKeywords.filter(Boolean) : [];
-  const revenue = Array.isArray(overrides.revenue) ? overrides.revenue.filter(Boolean) : [];
+  const companySize = Array.isArray(overrides.companySize) ? overrides.companySize.map(normalizeRange).filter(Boolean) : [];
+  const excludeKeywords = Array.isArray(overrides.excludeKeywords) ? overrides.excludeKeywords.map(cleanToken).filter(Boolean) : [];
+  const revenue = Array.isArray(overrides.revenue) ? overrides.revenue.map(normalizeRange).filter(Boolean) : [];
 
   const payload = {
     page: Number(overrides.page || config.apollo.page),
-    per_page: Number(overrides.perPage || config.apollo.perPage),
-    person_seniorities: targetTitles,
+    per_page: clampPerPage(overrides.perPage || config.apollo.perPage),
+    person_titles: targetTitles.map(cleanToken).filter(Boolean),
     organization_locations: targetLocations,
-    contact_email_status: emailStatus,
-    q_keywords: includeKeywords.join(" ")
+    contact_email_status: emailStatus.map(normalizeEmailStatus).filter(Boolean),
+    q_keywords: includeKeywords.map(cleanToken).filter(Boolean).join(" ")
   };
   if (companySize.length) {
     payload.organization_num_employees_ranges = companySize;
