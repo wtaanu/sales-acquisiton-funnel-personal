@@ -568,14 +568,21 @@ async function handleRequest(request, response) {
 
       const rawRows = [];
       const pagesPulled = [];
+      let apolloReturned = 0;
       let duplicatesSkipped = 0;
+      let missingEmailSkipped = 0;
       for (let offset = 0; offset < filters.pagesToPull; offset += 1) {
         const page = filters.page + offset;
         const people = await fetchApolloPeople({ ...filters, page });
         pagesPulled.push(page);
+        apolloReturned += people.length;
         for (const person of people) {
           const row = mapApolloRowToRawLead(person, timestamp);
-          if (!row.email || existingLeadIds.has(row.lead_id) || existingEmails.has(row.email)) {
+          if (!row.email) {
+            missingEmailSkipped += 1;
+            continue;
+          }
+          if (existingLeadIds.has(row.lead_id) || existingEmails.has(row.email)) {
             duplicatesSkipped += 1;
             continue;
           }
@@ -595,7 +602,7 @@ async function handleRequest(request, response) {
           raw_payload: row
         })));
       }
-      runResults.push({ job: "apollo-direct-import", code: 0, imported: rawRows.length, duplicatesSkipped, pagesPulled, filters });
+      runResults.push({ job: "apollo-direct-import", code: 0, imported: rawRows.length, apolloReturned, duplicatesSkipped, missingEmailSkipped, pagesPulled, filters });
 
       for (const job of ["score-leads", "verify-emails"]) {
         const script = allowedJobs.get(job);
@@ -624,7 +631,9 @@ async function handleRequest(request, response) {
       apolloFilters: filters,
       pagesPulled: importJob.pagesPulled || [],
       imported: importJob.imported || 0,
+      apolloReturned: importJob.apolloReturned || 0,
       duplicatesSkipped: importJob.duplicatesSkipped || 0,
+      missingEmailSkipped: importJob.missingEmailSkipped || 0,
       nextPage: filters.page + filters.pagesToPull,
       jobs: runResults,
       migrated: migration.migrated,
