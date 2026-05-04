@@ -847,7 +847,7 @@ async function handleRequest(request, response) {
             sequence_step: draft.sequence_step,
             followup_count: Math.max(Number(prospect.followup_count || 0), draft.sequence_step - 1),
             last_sent_at: sentAt,
-            next_followup_at: draft.sequence_step < 3 ? new Date(Date.now() + (draft.sequence_step === 1 ? 4 : 5) * 24 * 60 * 60 * 1000).toISOString() : null,
+            next_followup_at: draft.sequence_step < 3 ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() : null,
             updated_at: sentAt
           }).eq("id", prospect.id);
           await logSharedSendEvent({
@@ -956,7 +956,7 @@ async function handleRequest(request, response) {
       sequence_step: draft.sequence_step,
       followup_count: Math.max(Number(prospect.followup_count || 0), draft.sequence_step - 1),
       last_sent_at: sentAt,
-      next_followup_at: draft.sequence_step < 3 ? new Date(Date.now() + (draft.sequence_step === 1 ? 4 : 5) * 24 * 60 * 60 * 1000).toISOString() : null,
+      next_followup_at: draft.sequence_step < 3 ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() : null,
       updated_at: sentAt
     }).eq("id", prospect.id);
     await logSharedSendEvent({

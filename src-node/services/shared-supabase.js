@@ -215,7 +215,7 @@ export async function getSalesDashboardData() {
 
   const [prospects, drafts, replies, events, customSegments] = await Promise.all([
     supabase.from("sales_prospects").select("*").order("updated_at", { ascending: false }).limit(1000),
-    supabase.from("sales_email_drafts").select("*, sales_prospects(company_name,buyer_name,email,industry,segment,prospect_status,followup_count)").order("updated_at", { ascending: false }).limit(100),
+    supabase.from("sales_email_drafts").select("*, sales_prospects(company_name,buyer_name,email,industry,segment,prospect_status,followup_count,last_sent_at,next_followup_at)").order("updated_at", { ascending: false }).limit(1000),
     supabase.from("sales_inbox_replies").select("*").order("created_at", { ascending: false }).limit(100),
     supabase.from("client_acquisition_email_events").select("*").order("created_at", { ascending: false }).limit(100),
     supabase.from("sales_segments").select("*").eq("is_active", true).order("created_at", { ascending: false })
@@ -292,6 +292,9 @@ function summarizeSalesFunnel(prospects, drafts, replies, events) {
     totalProspects: prospects.length,
     readyDrafts: drafts.filter((draft) => draft.draft_status === "ready").length,
     reviewedDrafts: drafts.filter((draft) => draft.draft_status === "reviewed").length,
+    sentDrafts: drafts.filter((draft) => draft.draft_status === "sent").length,
+    failedDrafts: drafts.filter((draft) => draft.draft_status === "failed").length,
+    followupDue: prospects.filter((prospect) => prospect.next_followup_at && new Date(prospect.next_followup_at).getTime() <= Date.now() && !prospect.replied_at && !prospect.unsubscribed_at && Number(prospect.followup_count || 0) < 3).length,
     sentEvents: events.filter((event) => event.event_type === "sent").length,
     replies: replies.length,
     byStatus,
